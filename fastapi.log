@@ -1,0 +1,14 @@
+[2025-09-23 07:19:47,277.277] INFO [131028186456192] - Will watch for changes in these directories: ['/usr/src/fastapi']
+[2025-09-23 07:19:47,277.277] INFO [131028186456192] - Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+[2025-09-23 07:19:47,277.277] INFO [131028186456192] - Started reloader process [83066] using StatReload
+[2025-09-23 07:19:47,823.823] INFO [128219739336832] - Started server process [83068]
+[2025-09-23 07:19:47,823.823] INFO [128219739336832] - Waiting for application startup.
+[2025-09-23 07:19:47,824.824] INFO [128219739336832] - Application startup complete.
+[2025-09-23 07:20:37,684.684] INFO [128219739336832] - 127.0.0.1:53638 - "GET /docs HTTP/1.0" 200
+[2025-09-23 07:20:38,109.109] INFO [128219739336832] - 127.0.0.1:53646 - "GET /openapi.json HTTP/1.0" 200
+[2025-09-23 07:20:47,866.866] INFO [128219739336832] - 127.0.0.1:40726 - "GET /phonenumbers/?page=1&page_size=10 HTTP/1.0" 200
+[2025-09-23 07:21:02,375.375] INFO [128219739336832] - Shutting down
+[2025-09-23 07:21:02,476.476] INFO [128219739336832] - Waiting for application shutdown.
+[2025-09-23 07:21:02,476.476] INFO [128219739336832] - Application shutdown complete.
+[2025-09-23 07:21:02,476.476] INFO [128219739336832] - Finished server process [83068]
+[2025-09-23 07:21:02,482.482] INFO [131028186456192] - Stopping reloader process [83066]
