@@ -16,9 +16,9 @@ app.add_middleware(CORSMiddleware, expose_headers=['*'], allow_origins=['*'],all
 class PhoneNumber(BaseModel):
     PhoneNumber: str
     Description: str
-    IncomingRouteGroupID: int
-    OutgoingRouteGroupID: int
-    SuspendedRouteGroupID: int
+    IncomingSIPTrunkID: int
+    OutgoingSIPTrunkID: int
+    FallbackSIPTrunkID: int
     FallbackNumber: str
 
 class SIPTrunk(BaseModel):
@@ -31,8 +31,8 @@ async def create_item(phonenumber: PhoneNumber):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        query = "INSERT INTO gozupees_phonenumbers (PhoneNumber,Description,IncomingRouteGroupID,OutgoingRouteGroupID,SuspensionRouteGroupID,FallbackPhoneNumber,Status) VALUES (%s,%s,%s,%s,%s,%s,'Active')"
-        cursor.execute(query, (phonenumber.PhoneNumber,phonenumber.Description,phonenumber.IncomingRouteGroupID,phonenumber.OutgoingRouteGroupID,phonenumber.SuspendedRouteGroupID,phonenumber.FallbackNumber))
+        query = "INSERT INTO gozupees_phonenumbers (PhoneNumber,Description,IncomingSIPTrunkID,OutgoingSIPTrunkID,FallbackSIPTrunkID,FallbackPhoneNumber,Status) VALUES (%s,%s,%s,%s,%s,%s,'Active')"
+        cursor.execute(query, (phonenumber.PhoneNumber,phonenumber.Description,phonenumber.IncomingSIPTrunkID,phonenumber.OutgoingSIPTrunkID,phonenumber.FallbackSIPTrunkID,phonenumber.FallbackNumber))
         conn.commit()
         return {"message": "PhoneNumber Added successfully"}
     except mysql.connector.Error as err:
@@ -84,7 +84,7 @@ async def delete_items(phonenumber: str):
         query = "DELETE FROM gozupees_phonenumbers WHERE PhoneNumber=%s"
         cursor.execute(query, (phonenumber,))
         conn.commit()
-        return {"message": "Item deleted successfully"}
+        return {"message": "PhoneNumber deleted successfully"}
     except mysql.connector.Error as err:
         raise HTTPException(status_code=500, detail=f"Database error: {err}")
     finally:
