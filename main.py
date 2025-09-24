@@ -1,8 +1,13 @@
-from fastapi import FastAPI, HTTPException, Query, Depends, Header
+from fastapi import FastAPI, HTTPException, Query, Depends, Header, File, UploadFile, BackgroundTasks
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from database import get_db_connection
 from dotenv import load_dotenv
 import os
+import io
+import csv
+import codecs
+import pandas as pd
 
 # from fastapi_pagination import Page, paginate, add_pagination
 # from fastapi_pagination.bases import AbstractPage
@@ -25,7 +30,7 @@ class PhoneNumber(BaseModel):
     IncomingSIPTrunkID: int
     OutgoingSIPTrunkID: int
     FallbackSIPTrunkID: int
-    FallbackNumber: str
+    FallbackPhoneNumber: str
 
 class SIPTrunk(BaseModel):
     SIPTrunkName: str
@@ -38,6 +43,52 @@ def verify_token(x_api_token: str = Header(...)):
         raise HTTPException(status_code=401, detail="Invalid or missing API token")
 
 
+# Endpoint to bulk receive PhoneNumbers Data
+@app.post("/phonenumbers-bulk-upload/")
+async def upload_csv_bulk(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+    """
+    Uploads a CSV file, processes its data in bulk, and returns a JSON response.
+    """
+    if not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Only CSV files are allowed.")
+    try:
+        # Read the file content
+        # Use codecs.iterdecode for robust handling of various encodings
+        csv_reader = csv.DictReader(codecs.iterdecode(file.file, 'utf-8'))
+        
+        # Convert CSV data to a list of dictionaries
+        data = list(csv_reader)
+
+        # Add a background task to close the file after the response is sent
+        background_tasks.add_task(file.file.close)
+
+        # Process the data in bulk (example: add a new field)
+        processed_data = []
+
+        conn = get_db_connection()
+        for row in data:
+
+            try:
+
+                cursor = conn.cursor()
+                query = "INSERT INTO gozupees_phonenumbers (PhoneNumber,Description,IncomingSIPTrunkID,OutgoingSIPTrunkID,FallbackSIPTrunkID,FallbackPhoneNumber,Status) VALUES (%s,%s,%s,%s,%s,%s,'Active')"
+                print ("CSV data : "+ row['PhoneNumber'] + " " + row['Description'] + row['IncomingSIPTrunkID'] + " " + row['OutgoingSIPTrunkID'] + " " + row['FallbackSIPTrunkID'] + " " + row['FallbackPhoneNumber'])
+                cursor.execute(query, (row['PhoneNumber'],row['Description'],row['IncomingSIPTrunkID'],row['OutgoingSIPTrunkID'],row['FallbackSIPTrunkID'],row['FallbackPhoneNumber']))
+                conn.commit()
+
+                # Example processing: adding a 'status' field
+                row['status'] = 'processed'
+                processed_data.append(row)
+
+            except mysql.connector.Error as err:
+                raise HTTPException(status_code=500, detail=f"Database error: {err}")
+
+        return JSONResponse(content={"message": "CSV uploaded and processed successfully", "data": processed_data})
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing CSV: {e}")
+
+
 # Endpoint to create a PhoneNumber
 @app.post("/phonenumbers/")
 async def create_item(phonenumber: PhoneNumber, dependencies=[Depends(verify_token)]):
@@ -45,7 +96,7 @@ async def create_item(phonenumber: PhoneNumber, dependencies=[Depends(verify_tok
         conn = get_db_connection()
         cursor = conn.cursor()
         query = "INSERT INTO gozupees_phonenumbers (PhoneNumber,Description,IncomingSIPTrunkID,OutgoingSIPTrunkID,FallbackSIPTrunkID,FallbackPhoneNumber,Status) VALUES (%s,%s,%s,%s,%s,%s,'Active')"
-        cursor.execute(query, (phonenumber.PhoneNumber,phonenumber.Description,phonenumber.IncomingSIPTrunkID,phonenumber.OutgoingSIPTrunkID,phonenumber.FallbackSIPTrunkID,phonenumber.FallbackNumber))
+        cursor.execute(query, (phonenumber.PhoneNumber,phonenumber.Description,phonenumber.IncomingSIPTrunkID,phonenumber.OutgoingSIPTrunkID,phonenumber.FallbackSIPTrunkID,phonenumber.FallbackPhoneNumber))
         conn.commit()
         return {"message": "PhoneNumber Added successfully"}
     except mysql.connector.Error as err:
@@ -153,7 +204,7 @@ async def update_items(phonenumber: str, fallbacknumber: str):
         query = "UPDATE gozupees_phonenumbers SET FallbackPhoneNumber=%s, UpdatedAt=CURRENT_TIMESTAMP WHERE PhoneNumber=%s"
         cursor.execute(query, (fallbacknumber,phonenumber))
         conn.commit()
-        return {"message": "PhoneNumber FallbackNumber Updated successfully"}
+        return {"message": "PhoneNumber FallbackPhoneNumber Updated successfully"}
     except mysql.connector.Error as err:
         raise HTTPException(status_code=500, detail=f"Database error: {err}")
     finally:
