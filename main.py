@@ -1,9 +1,11 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends, Header
 from pydantic import BaseModel
 from database import get_db_connection
+from dotenv import load_dotenv
+import os
+
 # from fastapi_pagination import Page, paginate, add_pagination
 # from fastapi_pagination.bases import AbstractPage
-
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -11,6 +13,10 @@ app = FastAPI()
 #add_pagination(app)
 
 app.add_middleware(CORSMiddleware, expose_headers=['*'], allow_origins=['*'],allow_credentials=True, allow_methods=['*'], allow_headers=['*'])
+
+# Loading .env file for API Key Token
+load_dotenv()
+API_TOKEN = os.getenv("API_TOKEN")
 
 # Define Pydantic models for data validation
 class PhoneNumber(BaseModel):
@@ -25,9 +31,16 @@ class SIPTrunk(BaseModel):
     SIPTrunkName: str
     SIPTrunkAddress: str
 
+
+def verify_token(x_api_token: str = Header(...)):
+    print ("API_TOKEN configured is : " + API_TOKEN)
+    if x_api_token != API_TOKEN:
+        raise HTTPException(status_code=401, detail="Invalid or missing API token")
+
+
 # Endpoint to create a PhoneNumber
 @app.post("/phonenumbers/")
-async def create_item(phonenumber: PhoneNumber):
+async def create_item(phonenumber: PhoneNumber, dependencies=[Depends(verify_token)]):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -43,7 +56,7 @@ async def create_item(phonenumber: PhoneNumber):
 
 
 # Example endpoint to get all items
-@app.get("/phonenumbers/")
+@app.get("/phonenumbers/", dependencies=[Depends(verify_token)])
 async def read_items(
             page: int = Query(1, ge=1, description="Page number"),
             page_size: int = Query(10, ge=1, le=100, description="Items per page")
@@ -76,7 +89,7 @@ async def read_items(
 
 
 # Endpoint to delete a phonenumber
-@app.delete("/phonenumbers/{phonenumber}")
+@app.delete("/phonenumbers/{phonenumber}",dependencies=[Depends(verify_token)])
 async def delete_items(phonenumber: str):
     try:
         conn = get_db_connection()
@@ -111,7 +124,7 @@ async def delete_items(phonenumber: str):
 
 
 # Endpoint to udpate phonenumber status
-@app.put("/phonenumbers_statusupdate/{phonenumber,status}")
+@app.put("/phonenumbers_statusupdate/{phonenumber,status}", dependencies=[Depends(verify_token)])
 async def update_items(phonenumber: str, status: str):
     try:
         conn = get_db_connection()
@@ -132,7 +145,7 @@ async def update_items(phonenumber: str, status: str):
             conn.close()
 
 # Endpoint to update phonenumber fallbacknumber
-@app.put("/phonenumbers_fallbackupdate/{phonenumber,fallbacknumber}")
+@app.put("/phonenumbers_fallbackupdate/{phonenumber,fallbacknumber}", dependencies=[Depends(verify_token)])
 async def update_items(phonenumber: str, fallbacknumber: str):
     try:
         conn = get_db_connection()
@@ -152,7 +165,7 @@ async def update_items(phonenumber: str, fallbacknumber: str):
 ### SIP Trunk/Gateway Management
 
 # Example endpoint to get all SIP Trunks
-@app.get("/siptrunks/")
+@app.get("/siptrunks/", dependencies=[Depends(verify_token)])
 async def read_items(
             page: int = Query(1, ge=1, description="Page number"),
             page_size: int = Query(10, ge=1, le=100, description="Items per page")
@@ -185,7 +198,7 @@ async def read_items(
 
 
 # Endpoint to update a SIP Trunk
-@app.put("/siptrunk_update/{siptrunkid}")
+@app.put("/siptrunk_update/{siptrunkid}", dependencies=[Depends(verify_token)])
 async def update_items(siptrunkid: int, siptrunkinfo: SIPTrunk):
     try:
         conn = get_db_connection()
@@ -206,7 +219,7 @@ async def update_items(siptrunkid: int, siptrunkinfo: SIPTrunk):
             conn.close()
 
 # Endpoint to delete a SIP Trunk
-@app.delete("/siptrunks/{siptrunkid}")
+@app.delete("/siptrunks/{siptrunkid}", dependencies=[Depends(verify_token)])
 async def delete_items(siptrunkid: int):
     try:
         conn = get_db_connection()
@@ -229,7 +242,7 @@ async def delete_items(siptrunkid: int):
 
 
 # Endpoint to create a SIPTrunk
-@app.post("/siptrunks/")
+@app.post("/siptrunks/", dependencies=[Depends(verify_token)])
 async def create_item(siptrunk: SIPTrunk):
     try:
         conn = get_db_connection()
