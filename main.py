@@ -20,8 +20,9 @@ app = FastAPI()
 app.add_middleware(CORSMiddleware, expose_headers=['*'], allow_origins=['*'],allow_credentials=True, allow_methods=['*'], allow_headers=['*'])
 
 # Loading .env file for API Key Token
-load_dotenv()
-API_TOKEN = os.getenv("API_TOKEN")
+#load_dotenv()
+#API_TOKEN = os.getenv("API_TOKEN")
+API_TOKEN="wd0bms/F0WQsngRBq-nZuJ-jT5LCR=ljRqo=rtnVPsQLkMxunkYCQZlqNp2JGBcm"
 
 # Define Pydantic models for data validation
 class PhoneNumber(BaseModel):
@@ -38,7 +39,6 @@ class SIPTrunk(BaseModel):
 
 
 def verify_token(x_api_token: str = Header(...)):
-    print ("API_TOKEN configured is : " + API_TOKEN)
     if x_api_token != API_TOKEN:
         raise HTTPException(status_code=401, detail="Invalid or missing API token")
 
@@ -88,6 +88,9 @@ async def upload_csv_bulk(background_tasks: BackgroundTasks, file: UploadFile = 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing CSV: {e}")
 
+    finally:
+        if conn:
+            conn.close()
 
 # Endpoint to create a PhoneNumber
 @app.post("/phonenumbers/")
