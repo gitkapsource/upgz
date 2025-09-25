@@ -33,6 +33,15 @@ class PhoneNumber(BaseModel):
     FallbackSIPTrunkID: int
     FallbackPhoneNumber: str
 
+class PhoneNumberUpdate(BaseModel):
+    PhoneNumber: str
+    Description: str
+    IncomingSIPTrunkID: int
+    OutgoingSIPTrunkID: int
+    FallbackSIPTrunkID: int
+    FallbackPhoneNumber: str
+    Status: str
+
 class SIPTrunk(BaseModel):
     SIPTrunkName: str
     SIPTrunkAddress: str
@@ -158,6 +167,22 @@ async def delete_items(phonenumber: str):
         if conn:
             conn.close()
 
+
+# Phonenumbers endpoint to update all items
+@app.put("/phonenumbers", dependencies=[Depends(verify_token)])
+async def update_items(phonenumber: PhoneNumberUpdate):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True) # Return results as dictionaries
+        query = "UPDATE gozupees_phonenumbers SET Description=%s,IncomingSIPTrunkID=%s,OutgoingSIPTrunkID=%s,FallbackSIPTrunkID=%s,FallbackPhoneNumber=%s,Status=%s,UpdatedAt=CURRENT_TIMESTAMP WHERE PhoneNumber=%s"
+        cursor.execute(query, (phonenumber.Description,phonenumber.IncomingSIPTrunkID,phonenumber.OutgoingSIPTrunkID,phonenumber.FallbackSIPTrunkID,phonenumber.FallbackPhoneNumber,phonenumber.Status,phonenumber.PhoneNumber))
+        conn.commit()
+        return {"message": "PhoneNumber updated successfully"}
+    except mysql.connector.Error as err:
+        raise HTTPException(status_code=500, detail=f"Database error: {err}")
+    finally:
+        if conn:
+            conn.close()
 
 
 # Example endpoint to update all items
