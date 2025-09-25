@@ -102,8 +102,8 @@ async def upload_csv_bulk(background_tasks: BackgroundTasks, file: UploadFile = 
             conn.close()
 
 # Endpoint to create a PhoneNumber
-@app.post("/phonenumbers/")
-async def create_item(phonenumber: PhoneNumber, dependencies=[Depends(verify_token)]):
+@app.post("/phonenumbers/", dependencies=[Depends(verify_token)])
+async def create_item(phonenumber: PhoneNumber):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -183,24 +183,6 @@ async def update_items(phonenumber: PhoneNumberUpdate):
     finally:
         if conn:
             conn.close()
-
-
-# Example endpoint to update all items
-#@app.put("/phonenumbers/{phonenumber}")
-#async def update_items(phonenumber: str):
-#    try:
-#        conn = get_db_connection()
-#        cursor = conn.cursor(dictionary=True) # Return results as dictionaries
-#        query = "UPDATE gozupees_phonenumbers SET title=%s, UpdatedAt=CURRENT_TIMESTAMP WHERE PhoneNumber=%s"
-#        cursor.execute(query, (phonenumber))
-#        conn.commit()
-#        return {"message": "Item updated successfully"}
-#    except mysql.connector.Error as err:
-#        raise HTTPException(status_code=500, detail=f"Database error: {err}")
-#    finally:
-#        if conn:
-#            conn.close()
-
 
 # Endpoint to udpate phonenumber status
 @app.put("/phonenumbers_statusupdate/{phonenumber,status}", dependencies=[Depends(verify_token)])
