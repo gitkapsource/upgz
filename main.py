@@ -53,7 +53,7 @@ def verify_token(x_api_token: str = Header(...)):
 
 
 # Endpoint to bulk receive PhoneNumbers Data
-@app.post("/phonenumbers-bulk-upload/")
+@app.post("/phonenumbers-bulk-upload/", dependencies=[Depends(verify_token)])
 async def upload_csv_bulk(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     """
     Uploads a CSV file, processes its data in bulk, and returns a JSON response.
