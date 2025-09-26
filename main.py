@@ -56,7 +56,11 @@ def verify_token(x_api_token: str = Header(...)):
 @app.post("/phonenumbers-bulk-upload/", dependencies=[Depends(verify_token)])
 async def upload_csv_bulk(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     """
-    Uploads a CSV file, processes its data in bulk, and returns a JSON response.
+    Uploads a CSV file, processes its data in bulk, and returns a JSON response. \n
+    CSV FILE TEMPLATE (Required Fields):\n        
+    PhoneNumber,  Description, IncomingSIPTrunkID,OutgoingSIPTrunkID,FallbackSIPTrunkID,FallbackPhoneNumber \n
+    CSV FILE EXAMPLE VALUES :
+    \n "+44712345678", "UK Mobile", "1", "2", "3", "+447111222333"
     """
     if not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only CSV files are allowed.")
@@ -151,23 +155,6 @@ async def read_items(
             conn.close()
 
 
-# Endpoint to delete a phonenumber
-@app.delete("/phonenumbers/{phonenumber}",dependencies=[Depends(verify_token)])
-async def delete_items(phonenumber: str):
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True) # Return results as dictionaries
-        query = "DELETE FROM gozupees_phonenumbers WHERE PhoneNumber=%s"
-        cursor.execute(query, (phonenumber,))
-        conn.commit()
-        return {"message": "PhoneNumber deleted successfully"}
-    except mysql.connector.Error as err:
-        raise HTTPException(status_code=500, detail=f"Database error: {err}")
-    finally:
-        if conn:
-            conn.close()
-
-
 # Phonenumbers endpoint to update all items
 @app.put("/phonenumbers", dependencies=[Depends(verify_token)])
 async def update_items(phonenumber: PhoneNumberUpdate):
@@ -222,6 +209,21 @@ async def update_items(phonenumber: str, fallbacknumber: str):
             conn.close()
 
 
+# Endpoint to delete a phonenumber
+@app.delete("/phonenumbers/{phonenumber}",dependencies=[Depends(verify_token)])
+async def delete_items(phonenumber: str):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True) # Return results as dictionaries
+        query = "DELETE FROM gozupees_phonenumbers WHERE PhoneNumber=%s"
+        cursor.execute(query, (phonenumber,))
+        conn.commit()
+        return {"message": "PhoneNumber deleted successfully"}
+    except mysql.connector.Error as err:
+        raise HTTPException(status_code=500, detail=f"Database error: {err}")
+    finally:
+        if conn:
+            conn.close()
 
 ### SIP Trunk/Gateway Management
 
