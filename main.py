@@ -156,12 +156,16 @@ async def read_items(
 
 
 # Phonenumbers endpoint to update all items
-@app.put("/phonenumbers", dependencies=[Depends(verify_token)])
+@app.put("/phonenumbers/", dependencies=[Depends(verify_token)])
 async def update_items(phonenumber: PhoneNumberUpdate):
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True) # Return results as dictionaries
-        query = "UPDATE gozupees_phonenumbers SET Description=%s,IncomingSIPTrunkID=%s,OutgoingSIPTrunkID=%s,FallbackSIPTrunkID=%s,FallbackPhoneNumber=%s,Status=%s,UpdatedAt=CURRENT_TIMESTAMP WHERE PhoneNumber=%s"
+
+        if phonenumber.Status == 'Ported':
+            query = "UPDATE gozupees_phonenumbers SET Description=%s,IncomingSIPTrunkID=%s,OutgoingSIPTrunkID=%s,FallbackSIPTrunkID=%s,FallbackPhoneNumber=%s,Status=%s,UpdatedAt=CURRENT_TIMESTAMP, PortedMarkedAt=CURRENT_TIMESTAMP WHERE PhoneNumber=%s"
+        else:
+            query = "UPDATE gozupees_phonenumbers SET Description=%s,IncomingSIPTrunkID=%s,OutgoingSIPTrunkID=%s,FallbackSIPTrunkID=%s,FallbackPhoneNumber=%s,Status=%s,UpdatedAt=CURRENT_TIMESTAMP, PortedMarkedAt=NULL WHERE PhoneNumber=%s"
         cursor.execute(query, (phonenumber.Description,phonenumber.IncomingSIPTrunkID,phonenumber.OutgoingSIPTrunkID,phonenumber.FallbackSIPTrunkID,phonenumber.FallbackPhoneNumber,phonenumber.Status,phonenumber.PhoneNumber))
         conn.commit()
         return {"message": "PhoneNumber updated successfully"}
@@ -177,7 +181,11 @@ async def update_items(phonenumber: str, status: str):
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True) # Return results as dictionaries
-        query = "UPDATE gozupees_phonenumbers SET Status=%s, UpdatedAt=CURRENT_TIMESTAMP WHERE PhoneNumber=%s"
+        if status == 'Ported':
+            query = "UPDATE gozupees_phonenumbers SET Status=%s, UpdatedAt=CURRENT_TIMESTAMP, PortedMarkedAt=CURRENT_TIMESTAMP WHERE PhoneNumber=%s"
+        else:
+            query = "UPDATE gozupees_phonenumbers SET Status=%s, UpdatedAt=CURRENT_TIMESTAMP, PortedMarkedAt=NULL WHERE PhoneNumber=%s"
+
         cursor.execute(query, (status, phonenumber))
         conn.commit()
 
