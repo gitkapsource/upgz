@@ -76,7 +76,11 @@ async def upload_csv_bulk(background_tasks: BackgroundTasks, file: UploadFile = 
     CSV FILE TEMPLATE (Required Fields):\n        
     PhoneNumber,  Description, IncomingSIPTrunkID,OutgoingSIPTrunkID,FallbackSIPTrunkID,FallbackPhoneNumber \n
     CSV FILE EXAMPLE VALUES :
-    \n "+44712345678", "UK Mobile", "1", "2", "3", "+447111222333"
+    \n "+44712345678", "UK Mobile", "1", "2", "3", "+447111222333"\n
+    IncomingSIPTrunkID: Mention the SIP Trunk ID where the Calls to PhoneNumber (Active State) should be routed to \n
+    OutgoingSIPTrunkID: Mention the SIP Trunk ID where the Calls from this PhoneNumber should be routed to \n
+    FallbackSIPTrunkID: Mention the SIP Trunk ID where the Calls to this PhoneNumber (Suspended State) should be routed to 
+
     """
     if not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only CSV files are allowed.")
@@ -124,6 +128,12 @@ async def upload_csv_bulk(background_tasks: BackgroundTasks, file: UploadFile = 
 # Endpoint to create a PhoneNumber
 @app.post("/phonenumbers/", dependencies=[Depends(verify_token)])
 async def create_item(phonenumber: PhoneNumber):
+    """
+    IncomingSIPTrunkID: Mention the SIP Trunk ID where the Calls to PhoneNumber (Active State) should be routed to \n
+    OutgoingSIPTrunkID: Mention the SIP Trunk ID where the Calls from this PhoneNumber should be routed to \n
+    FallbackSIPTrunkID: Mention the SIP Trunk ID where the Calls to this PhoneNumber (Suspended State) should be routed to
+    """
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -174,6 +184,12 @@ async def read_items(
 # Phonenumbers endpoint to update all items
 @app.put("/phonenumbers/", dependencies=[Depends(verify_token)])
 async def update_items(phonenumber: PhoneNumberUpdate):
+    """
+    IncomingSIPTrunkID: Mention the SIP Trunk ID where the Calls to PhoneNumber (Active State) should be routed to \n
+    OutgoingSIPTrunkID: Mention the SIP Trunk ID where the Calls from this PhoneNumber should be routed to \n
+    FallbackSIPTrunkID: Mention the SIP Trunk ID where the Calls to this PhoneNumber (Suspended State) should be routed to
+    """
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True) # Return results as dictionaries
@@ -249,8 +265,8 @@ async def delete_items(phonenumber: str):
         if conn:
             conn.close()
 
-
-# Endpoint to delete a ported phonenumbers post 30 Minutes of marked as Ported
+"""
+# Endpoint to delete a ported phonenumbers post 30 Days of marked as Ported
 @app.delete("/phonenumbers-ported-clean",dependencies=[Depends(verify_token)])
 async def delete_items_ported():
     try:
@@ -265,6 +281,7 @@ async def delete_items_ported():
     finally:
         if conn:
             conn.close()
+"""
 
 ### SIP Trunk/Gateway Management
 
