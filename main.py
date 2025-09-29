@@ -45,6 +45,14 @@ class PhoneNumberUpdate(BaseModel):
     FallbackPhoneNumber: str
     Status: str
 
+class PhoneNumberStatus(BaseModel):
+    PhoneNumber: str
+    Status: str
+
+class PhoneNumberFallbackNumber(BaseModel):
+    PhoneNumber: str
+    FallBackNumber: str
+
 class SIPTrunk(BaseModel):
     SIPTrunkName: str
     SIPTrunkAddress: str
@@ -208,17 +216,18 @@ async def update_items(phonenumber: PhoneNumberUpdate):
             conn.close()
 
 # Endpoint to udpate phonenumber status
-@app.put("/phonenumbers_statusupdate/{phonenumber,status}", dependencies=[Depends(verify_token)])
-async def update_items(phonenumber: str, status: str):
+@app.put("/phonenumbers_statusupdate/", dependencies=[Depends(verify_token)])
+async def update_items(phonenumber: PhoneNumberStatus):
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True) # Return results as dictionaries
-        if status == 'Ported':
+
+        if phonenumber.Status == 'Ported':
             query = "UPDATE gozupees_phonenumbers SET Status=%s, UpdatedAt=CURRENT_TIMESTAMP, PortedMarkedAt=CURRENT_TIMESTAMP WHERE PhoneNumber=%s"
         else:
             query = "UPDATE gozupees_phonenumbers SET Status=%s, UpdatedAt=CURRENT_TIMESTAMP, PortedMarkedAt=NULL WHERE PhoneNumber=%s"
 
-        cursor.execute(query, (status, phonenumber))
+        cursor.execute(query, (phonenumber.Status, phonenumber.PhoneNumber))
         conn.commit()
 
         if cursor.rowcount == 0:
@@ -233,13 +242,13 @@ async def update_items(phonenumber: str, status: str):
             conn.close()
 
 # Endpoint to update phonenumber fallbacknumber
-@app.put("/phonenumbers_fallbackupdate/{phonenumber,fallbacknumber}", dependencies=[Depends(verify_token)])
-async def update_items(phonenumber: str, fallbacknumber: str):
+@app.put("/phonenumbers_fallbackupdate/", dependencies=[Depends(verify_token)])
+async def update_items(phonenumber: PhoneNumberFallbackNumber):
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True) # Return results as dictionaries
         query = "UPDATE gozupees_phonenumbers SET FallbackPhoneNumber=%s, UpdatedAt=CURRENT_TIMESTAMP WHERE PhoneNumber=%s"
-        cursor.execute(query, (fallbacknumber,phonenumber))
+        cursor.execute(query, (phonenumber.FallBackNumber,phonenumber.PhoneNumber))
         conn.commit()
         return {"message": "PhoneNumber FallbackPhoneNumber Updated successfully"}
     except mysql.connector.Error as err:
