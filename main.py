@@ -8,6 +8,7 @@ import io
 import csv
 import codecs
 import pandas as pd
+import httpx
 
 # from fastapi_pagination import Page, paginate, add_pagination
 # from fastapi_pagination.bases import AbstractPage
@@ -23,6 +24,8 @@ app.add_middleware(CORSMiddleware, expose_headers=['*'], allow_origins=['*'],all
 #load_dotenv()
 #API_TOKEN = os.getenv("API_TOKEN")
 API_TOKEN="wd0bms/F0WQsngRBq-nZuJ-jT5LCR=ljRqo=rtnVPsQLkMxunkYCQZlqNp2JGBcm"
+
+client = httpx.AsyncClient()
 
 # Define Pydantic models for data validation
 class PhoneNumber(BaseModel):
@@ -46,6 +49,19 @@ class SIPTrunk(BaseModel):
     SIPTrunkName: str
     SIPTrunkAddress: str
 
+
+# Define a Pydantic model for the data to be sent to the external API
+# Define the fixed JSON payload
+KAMAILIO_DR_PAYLOAD = {
+    "jsonrpc": "2.0",
+    "method": "drouting.reload",
+    "id": 1
+}
+
+# Define a Pydantic model for the data received from the external API
+class ExternalApiResponse(BaseModel):
+    status: str
+    message: str
 
 def verify_token(x_api_token: str = Header(...)):
     if x_api_token != API_TOKEN:
@@ -233,6 +249,23 @@ async def delete_items(phonenumber: str):
         if conn:
             conn.close()
 
+
+# Endpoint to delete a ported phonenumbers post 30 Minutes of marked as Ported
+@app.delete("/phonenumbers-ported-clean",dependencies=[Depends(verify_token)])
+async def delete_items_ported():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True) # Return results as dictionaries
+        query = "DELETE FROM gozupees_phonenumbers WHERE Status='Ported' AND DATE_ADD(PortedMarkedAt, INTERVAL 30 MINUTE) < CURRENT_TIMESTAMP"
+        cursor.execute(query)
+        conn.commit()
+        return {"message": "Ported PhoneNumbers deleted successfully"}
+    except mysql.connector.Error as err:
+        raise HTTPException(status_code=500, detail=f"Database error: {err}")
+    finally:
+        if conn:
+            conn.close()
+
 ### SIP Trunk/Gateway Management
 
 # Example endpoint to get all SIP Trunks
@@ -282,6 +315,8 @@ async def update_items(siptrunkid: int, siptrunkinfo: SIPTrunk):
         cursor.execute(query, (siptrunkinfo.SIPTrunkName,siptrunkid))
         conn.commit()
 
+        result = await reload_kamailio_drouting()
+
         return {"message": "SIP Trunk Updated successfully"}
     except mysql.connector.Error as err:
         raise HTTPException(status_code=500, detail=f"Database error: {err}")
@@ -303,6 +338,8 @@ async def delete_items(siptrunkid: int):
         query = "DELETE FROM dr_gateways WHERE gwid=%s"
         cursor.execute(query, (siptrunkid,))
         conn.commit()
+
+        result = await reload_kamailio_drouting()
 
         return {"message": "SIP Trunk deleted successfully"}
     except mysql.connector.Error as err:
@@ -330,9 +367,31 @@ async def create_item(siptrunk: SIPTrunk):
         cursor.execute(query, (new_siptrunk_id,new_siptrunk_id,siptrunk.SIPTrunkName))
         conn.commit()
 
+        result = await reload_kamailio_drouting()
+
         return {"message": "SIPTrunk Added successfully"}
     except mysql.connector.Error as err:
         raise HTTPException(status_code=500, detail=f"Database error: {err}")
     finally:
         if conn:
             conn.close()
+
+# Function to call Kamailio DROUTING RELOAD
+async def reload_kamailio_drouting():
+        """
+        Fetches data from an external HTTP URL asynchronously.
+        """
+        url = "http://127.0.0.1:9090/RPC"
+
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(url,json=KAMAILIO_DR_PAYLOAD)
+                response.raise_for_status()  # Raise an exception for bad status codes
+                return response.json()
+            except httpx.RequestError as exc:
+                print(f"An error occurred while requesting {exc.request.url!r}: {exc}")
+                return {"error": "Failed to fetch data from external service"}
+            except httpx.HTTPStatusError as exc:
+                print(f"Error response {exc.response.status_code} while requesting {exc.request.url!r}: {exc}")
+                return {"error": f"External service returned status {exc.response.status_code}"}
+
