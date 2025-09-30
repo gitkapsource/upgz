@@ -45,6 +45,9 @@ class PhoneNumberUpdate(BaseModel):
     FallbackPhoneNumber: str
     Status: str
 
+class PhoneNumberDel(BaseModel):
+    PhoneNumber: str
+
 class PhoneNumberStatus(BaseModel):
     PhoneNumber: str
     Status: str
@@ -57,6 +60,13 @@ class SIPTrunk(BaseModel):
     SIPTrunkName: str
     SIPTrunkAddress: str
 
+class SIPTrunkUpdate(BaseModel):
+    SIPTrunkID: int
+    SIPTrunkName: str
+    SIPTrunkAddress: str
+
+class SIPTrunkDel(BaseModel):
+    SIPTrunkID: int
 
 # Define a Pydantic model for the data to be sent to the external API
 # Define the fixed JSON payload
@@ -259,13 +269,13 @@ async def update_items(phonenumber: PhoneNumberFallbackNumber):
 
 
 # Endpoint to delete a phonenumber
-@app.delete("/phonenumbers/{phonenumber}",dependencies=[Depends(verify_token)])
-async def delete_items(phonenumber: str):
+@app.delete("/phonenumbers/",dependencies=[Depends(verify_token)])
+async def delete_items(phonenumber: PhoneNumberDel):
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True) # Return results as dictionaries
         query = "DELETE FROM gozupees_phonenumbers WHERE PhoneNumber=%s"
-        cursor.execute(query, (phonenumber,))
+        cursor.execute(query, (phonenumber.PhoneNumber,))
         conn.commit()
         return {"message": "PhoneNumber deleted successfully"}
     except mysql.connector.Error as err:
@@ -328,17 +338,17 @@ async def read_items(
 
 
 # Endpoint to update a SIP Trunk
-@app.put("/siptrunk_update/{siptrunkid}", dependencies=[Depends(verify_token)])
-async def update_items(siptrunkid: int, siptrunkinfo: SIPTrunk):
+@app.put("/siptrunk_update/", dependencies=[Depends(verify_token)])
+async def update_items(siptrunk: SIPTrunkUpdate):
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True) # Return results as dictionaries
         query = "UPDATE dr_gateways SET address=%s, description=%s WHERE gwid=%s"
-        cursor.execute(query, (siptrunkinfo.SIPTrunkAddress,siptrunkinfo.SIPTrunkName,siptrunkid))
+        cursor.execute(query, (siptrunk.SIPTrunkAddress,siptrunk.SIPTrunkName,siptrunk.SIPTrunkID))
         conn.commit()
 
         query = "UPDATE dr_rules SET description=%s WHERE groupid=%s"
-        cursor.execute(query, (siptrunkinfo.SIPTrunkName,siptrunkid))
+        cursor.execute(query, (siptrunk.SIPTrunkName,siptrunk.SIPTrunkID))
         conn.commit()
 
         result = await reload_kamailio_drouting()
@@ -351,18 +361,18 @@ async def update_items(siptrunkid: int, siptrunkinfo: SIPTrunk):
             conn.close()
 
 # Endpoint to delete a SIP Trunk
-@app.delete("/siptrunks/{siptrunkid}", dependencies=[Depends(verify_token)])
-async def delete_items(siptrunkid: int):
+@app.delete("/siptrunks/", dependencies=[Depends(verify_token)])
+async def delete_items(siptrunk: SIPTrunkDel):
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True) # Return results as dictionaries
 
         query = "DELETE FROM dr_rules WHERE groupid=%s"
-        cursor.execute(query, (siptrunkid,))
+        cursor.execute(query, (siptrunk.SIPTrunkID,))
         conn.commit()
 
         query = "DELETE FROM dr_gateways WHERE gwid=%s"
-        cursor.execute(query, (siptrunkid,))
+        cursor.execute(query, (siptrunk.SIPTrunkID,))
         conn.commit()
 
         result = await reload_kamailio_drouting()
