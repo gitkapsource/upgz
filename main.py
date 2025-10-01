@@ -110,6 +110,10 @@ async def upload_csv_bulk(background_tasks: BackgroundTasks, file: UploadFile = 
         # Convert CSV data to a list of dictionaries
         data = list(csv_reader)
 
+        row_count = len(data)
+
+        print("CSV Row Count:"+str(row_count))
+
         # Add a background task to close the file after the response is sent
         background_tasks.add_task(file.file.close)
 
@@ -133,7 +137,7 @@ async def upload_csv_bulk(background_tasks: BackgroundTasks, file: UploadFile = 
             except mysql.connector.Error as err:
                 raise HTTPException(status_code=500, detail=f"Database error: {err}")
 
-        return JSONResponse(content={"message": "CSV uploaded and processed successfully", "data": processed_data})
+        return JSONResponse(content={"message": "CSV uploaded and processed successfully", "data": processed_data, "row_count": row_count})
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing CSV: {e}")
