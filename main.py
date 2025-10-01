@@ -91,7 +91,7 @@ def verify_token(x_api_token: str = Header(...)):
 async def upload_csv_bulk(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     """
     Uploads a CSV file, processes its data in bulk, and returns a JSON response. \n
-    CSV FILE TEMPLATE (Required Fields):\n        
+    CSV FILE TEMPLATE (Required Fields): Mandatory File Header as below\n        
     PhoneNumber,  Description, IncomingSIPTrunkID,OutgoingSIPTrunkID,FallbackSIPTrunkID,FallbackPhoneNumber \n
     CSV FILE EXAMPLE VALUES :
     \n "+44712345678", "UK Mobile", "1", "2", "3", "+447111222333"\n
@@ -120,10 +120,9 @@ async def upload_csv_bulk(background_tasks: BackgroundTasks, file: UploadFile = 
         for row in data:
 
             try:
-
                 cursor = conn.cursor()
                 query = "INSERT INTO gozupees_phonenumbers (PhoneNumber,Description,IncomingSIPTrunkID,OutgoingSIPTrunkID,FallbackSIPTrunkID,FallbackPhoneNumber,Status) VALUES (%s,%s,%s,%s,%s,%s,'Active')"
-                print ("CSV data : "+ row['PhoneNumber'] + " " + row['Description'] + row['IncomingSIPTrunkID'] + " " + row['OutgoingSIPTrunkID'] + " " + row['FallbackSIPTrunkID'] + " " + row['FallbackPhoneNumber'])
+                #print ("CSV data : "+ row['PhoneNumber'] + " " + row['Description'] + row['IncomingSIPTrunkID'] + " " + row['OutgoingSIPTrunkID'] + " " + row['FallbackSIPTrunkID'] + " " + row['FallbackPhoneNumber'])
                 cursor.execute(query, (row['PhoneNumber'],row['Description'],row['IncomingSIPTrunkID'],row['OutgoingSIPTrunkID'],row['FallbackSIPTrunkID'],row['FallbackPhoneNumber']))
                 conn.commit()
 
