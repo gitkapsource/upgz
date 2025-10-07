@@ -100,6 +100,8 @@ async def upload_csv_bulk(background_tasks: BackgroundTasks, file: UploadFile = 
     FallbackSIPTrunkID: Mention the SIP Trunk ID where the Calls to this PhoneNumber (Suspended State) should be routed to 
 
     """
+    conn = None
+
     if not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only CSV files are allowed.")
     try:
