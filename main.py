@@ -54,7 +54,7 @@ class PhoneNumberStatus(BaseModel):
 
 class PhoneNumberFallbackNumber(BaseModel):
     PhoneNumber: str
-    FallBackNumber: str
+    FallbackPhoneNumber: str
 
 class SIPTrunk(BaseModel):
     SIPTrunkName: str
@@ -263,7 +263,7 @@ async def update_items(phonenumber: PhoneNumberFallbackNumber):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True) # Return results as dictionaries
         query = "UPDATE gozupees_phonenumbers SET FallbackPhoneNumber=%s, UpdatedAt=CURRENT_TIMESTAMP WHERE PhoneNumber=%s"
-        cursor.execute(query, (phonenumber.FallBackNumber,phonenumber.PhoneNumber))
+        cursor.execute(query, (phonenumber.FallbackPhoneNumber,phonenumber.PhoneNumber))
         conn.commit()
         return {"message": "PhoneNumber FallbackPhoneNumber Updated successfully"}
     except mysql.connector.Error as err:
