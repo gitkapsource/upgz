@@ -117,7 +117,7 @@ async def upload_csv_bulk(background_tasks: BackgroundTasks, file: UploadFile = 
         print("CSV Row Count:"+str(row_count))
 
         # Add a background task to close the file after the response is sent
-        background_tasks.add_task(file.file.close)
+        # background_tasks.add_task(file.file.close) # Causing I/O Error so commenting
 
         # Process the data in bulk (example: add a new field)
         processed_data = []
