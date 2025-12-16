@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query, Depends, Header, File, UploadFile, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Query, Depends, Header, File, UploadFile, BackgroundTasks, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from database import get_db_connection
@@ -67,6 +67,9 @@ class SIPTrunkUpdate(BaseModel):
 
 class SIPTrunkDel(BaseModel):
     SIPTrunkID: int
+
+class SIPCallID(BaseModel):
+    SIPCallID: str
 
 # Define a Pydantic model for the data to be sent to the external API
 # Define the fixed JSON payload
@@ -289,14 +292,13 @@ async def delete_items(phonenumber: PhoneNumberDel):
         if conn:
             conn.close()
 
-"""
 # Endpoint to delete a ported phonenumbers post 30 Days of marked as Ported
 @app.delete("/phonenumbers-ported-clean",dependencies=[Depends(verify_token)])
 async def delete_items_ported():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True) # Return results as dictionaries
-        query = "DELETE FROM gozupees_phonenumbers WHERE Status='Ported' AND DATE_ADD(PortedMarkedAt, INTERVAL 30 MINUTE) < CURRENT_TIMESTAMP"
+        query = "DELETE FROM gozupees_phonenumbers WHERE Status='Ported' AND DATE_ADD(PortedMarkedAt, INTERVAL 30 DAY) < CURRENT_TIMESTAMP"
         cursor.execute(query)
         conn.commit()
         return {"message": "Ported PhoneNumbers deleted successfully"}
@@ -305,7 +307,6 @@ async def delete_items_ported():
     finally:
         if conn:
             conn.close()
-"""
 
 ### SIP Trunk/Gateway Management
 
@@ -416,6 +417,76 @@ async def create_item(siptrunk: SIPTrunk):
     finally:
         if conn:
             conn.close()
+
+
+# Example endpoint to get provider_callid from sipcallid
+@app.get("/provider_callid/", dependencies=[Depends(verify_token)])
+async def read_items(sipcallid :str):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True) # Return results as dictionaries
+
+        query = "SELECT DISTINCT provider_callid FROM acc WHERE callid = %s"
+        cursor.execute(query, (sipcallid,))  # always a tuple for params
+
+        items = cursor.fetchall()
+
+        return {
+            "sipcallid": sipcallid,
+            "provider_callid": items
+        }
+
+
+    except mysql.connector.Error as err:
+        raise HTTPException(status_code=500, detail=f"Database error: {err}")
+    finally:
+        if conn:
+            conn.close()
+
+#Endpoint for VAPI webhook for Server URL parameter
+   
+@app.post("/vapi/incoming")
+async def handle_incoming(request: Request):
+    try:
+        # Get headers and body safely
+        headers = dict(request.headers)
+        body_bytes = await request.body()
+        body_text = body_bytes.decode("utf-8") if body_bytes else ""
+
+        print("---- VAPI Webhook Received ----")
+        print("Headers:", headers)
+        print("Body:", body_text)
+        print("--------------------------------")
+
+        # Try parsing JSON only if body exists
+        if body_text.strip():
+            try:
+                payload = await request.json()
+                print("Parsed JSON:", payload)
+            except Exception as e:
+                print("⚠️ Could not parse JSON:", e)
+        else:
+            print("No JSON body received")
+
+        # Return any response (you can change this to reject logic later)
+        return JSONResponse({"status": "received"})
+
+    except Exception as e:
+        print("❌ Error processing request:", e)
+        return JSONResponse({"status": "Error"})
+
+
+    """
+        return JSONResponse({
+            "actions": [
+                {
+                    "type": "reject",
+                    "reason": "no_assistant_assigned",
+                    "sip_status_code": 480
+                }
+            ]
+        })
+    """
 
 # Function to call Kamailio DROUTING RELOAD
 async def reload_kamailio_drouting():
